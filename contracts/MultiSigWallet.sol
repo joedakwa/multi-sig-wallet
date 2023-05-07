@@ -70,9 +70,11 @@ contract MultiSigWallet {
             data: _data,
             executed: false
         }));
+
+            emit Submit(transactions.length - 1);
+
     }
 
-    emit Submit(transactions.length - 1);
 
     function Approve(uint _txId) external onlyOwner txExists(_txId) notExecuted(_txId) notApproved(_txId) {
         confirmations[_txId][msg.sender] = true;
