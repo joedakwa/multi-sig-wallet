@@ -27,6 +27,21 @@ contract MultiSigWallet {
         _;
     }
 
+    modifier txExists(uint _txId) {
+        require(_txId < transactions.length, "tx does not exist");
+        _;
+    }
+
+    modifier notExecuted(uint _txId) {
+        require(!transactions[_txId].executed, "tx already executed");
+        _;
+    }
+
+    modifier notApproved(uint _txId) {
+        require(!confirmations[_txId][msg.sender], "tx already approved");
+        _;
+    }
+
     constructor(address[] memory _owners, uint _required) {
         require(_owners.length > 0, "owners required");
         require(_required > 0 && _required <= _owners.length, "invalid number of required confirmations");
@@ -59,7 +74,42 @@ contract MultiSigWallet {
 
     emit Submit(transactions.length - 1);
 
-    function Approve()
+    function Approve(uint _txId) external onlyOwner txExists(_txId) notExecuted(_txId) notApproved(_txId) {
+        confirmations[_txId][msg.sender] = true;
+        emit Approve(msg.sender, _txId);    
+    }
+
+    function _getConfirmationCount(uint _txId) private view returns (uint) {
+        uint count = 0;
+        for (uint i = 0; i < owners.length; i++) {
+            if (confirmations[_txId][owners[i]]) {
+                count += 1;
+            }
+        }
+        return count;
+
+
+    }
+
+    function Execute(uint _txId) external onlyOwner txExists(_txId) notExecuted(_txId) {
+        require(_getConfirmationCount(_txId) >= required, "cannot execute tx");
+
+        Transaction storage transaction = transactions[_txId];
+        transaction.executed = true;
+
+        (bool success, ) = transaction.to.call{value: transaction.value}(transaction.data);
+        require(success, "tx failed");
+
+        emit Execute(_txId);
+    }
+
+    function revoke(_txId) external onlyOwner txExists(_txId) notExecuted(_txId) {
+        require(confirmations[_txId][msg.sender], "tx not approved");
+
+        confirmations[_txId][msg.sender] = false;
+
+        emit Revoke(msg.sender, _txId);
+    }
 
 
 }
