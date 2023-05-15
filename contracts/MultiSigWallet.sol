@@ -9,10 +9,10 @@ contract MultiSigWallet {
     event Submit(uint indexed txId);
 
     // Event emitted when an owner approves a transaction
-    event Approve(uint indexed owner, address indexed txId);
+    event Approve(address indexed owner, uint indexed txId);
 
     // Event emitted when an owner revokes their approval of a transaction
-    event Revoke(uint indexed owner, address indexed txId);
+    event Revoke(address indexed owner, uint indexed txId);
 
     // Event emitted when a transaction is executed
     event Execute(uint indexed txId);
@@ -78,7 +78,7 @@ contract MultiSigWallet {
 
     // Function that allows the contract to receive ETH
     receive() external payable {
-        emit Deposit(msg.sender, msg.value);
+        emit Deposit(msg.sender, msg.value, address(this).balance);
     }
     // use callData for cheaper gas fees
     // This function allows the contract owner to submit a new transaction.
@@ -97,7 +97,7 @@ contract MultiSigWallet {
 
     // This function allows an owner to approve a transaction.
     // The confirmations mapping is updated with the owner's approval and emitted through the Approve event.
-    function Approve(uint _txId) external onlyOwner txExists(_txId) notExecuted(_txId) notApproved(_txId) {
+    function approve(uint _txId) external onlyOwner txExists(_txId) notExecuted(_txId) notApproved(_txId) {
         confirmations[_txId][msg.sender] = true;
         emit Approve(msg.sender, _txId);    
     }
@@ -116,7 +116,7 @@ contract MultiSigWallet {
     // This function allows the contract owner to execute a transaction once the required number of approvals is reached.
     // The transaction is marked as executed and the transaction details are sent to the recipient through a call.
     // An Execute event is emitted with the transaction ID.
-    function Execute(uint _txId) external onlyOwner txExists(_txId) notExecuted(_txId) {
+    function execute(uint _txId) external onlyOwner txExists(_txId) notExecuted(_txId) {
         require(_getConfirmationCount(_txId) >= required, "cannot execute tx");
 
         Transaction storage transaction = transactions[_txId];
@@ -129,7 +129,7 @@ contract MultiSigWallet {
     }
     // This function allows the contract owner to revoke their approval of a transaction.
     // The confirmations mapping is updated with the owner's revocation and emitted through the Revoke event.
-    function revoke(_txId) external onlyOwner txExists(_txId) notExecuted(_txId) {
+    function revoke(uint _txId) external onlyOwner txExists(_txId) notExecuted(_txId) {
         require(confirmations[_txId][msg.sender], "tx not approved");
 
         confirmations[_txId][msg.sender] = false;
