@@ -6,7 +6,7 @@ contract MultiSigWallet {
     event Deposit(address indexed sender, uint amount, uint balance);
 
     // Event emitted when a transaction is submitted
-    event Submit(uint indexed txId);
+    event Submit(address indexed owner, uint indexed txId, address indexed to, uint value, bytes data);
 
     // Event emitted when an owner approves a transaction
     event Approve(address indexed owner, uint indexed txId);
@@ -15,7 +15,7 @@ contract MultiSigWallet {
     event Revoke(address indexed owner, uint indexed txId);
 
     // Event emitted when a transaction is executed
-    event Execute(uint indexed txId);
+    event Execute(address indexed owner, uint indexed txId);
 
     // Represent a transaction
     struct Transaction {
@@ -23,6 +23,7 @@ contract MultiSigWallet {
         uint value;
         bytes data;
         bool executed;
+        uint numConfirmations;
     }
 
     // Store the addresses of the owners of the wallet
@@ -80,52 +81,69 @@ contract MultiSigWallet {
     receive() external payable {
         emit Deposit(msg.sender, msg.value, address(this).balance);
     }
+
+    function deposit() external payable {
+        emit Deposit(msg.sender, msg.value, address(this).balance);
+    }
     // use callData for cheaper gas fees
     // This function allows the contract owner to submit a new transaction.
     // The transaction details are added to the transactions array and emitted through the Submit event.
     function submit(address _to, uint _value, bytes memory _data) external onlyOwner {
+        
+        uint txId = transactions.length;
+
         transactions.push(Transaction({
             to: _to,
             value: _value,
             data: _data,
+            numConfirmations: 0,
             executed: false
         }));
 
-            emit Submit(transactions.length - 1);
+            emit Submit(msg.sender, txId, _to, _value, _data);
 
     }
 
     // This function allows an owner to approve a transaction.
     // The confirmations mapping is updated with the owner's approval and emitted through the Approve event.
     function approve(uint _txId) external onlyOwner txExists(_txId) notExecuted(_txId) notApproved(_txId) {
+
+        Transaction storage transaction = transactions[_txId];
+
+
         confirmations[_txId][msg.sender] = true;
+        // transaction.isApproved[msg.sender] = true;
+        transaction.numConfirmations += 1;
+
         emit Approve(msg.sender, _txId);    
     }
     // This function is a helper function to get the number of confirmations for a given transaction.
-    function _getConfirmationCount(uint _txId) private view returns (uint) {
-        uint count = 0;
-        for (uint i = 0; i < owners.length; i++) {
-            if (confirmations[_txId][owners[i]]) {
-                count += 1;
-            }
-        }
-        return count;
+    // function _getConfirmationCount(uint _txId) private view returns (uint) {
+    //     uint count = 0;
+    //     for (uint i = 0; i < owners.length; i++) {
+    //         if (confirmations[_txId][owners[i]]) {
+    //             count += 1;
+    //         }
+    //     }
+    //     return count;
 
 
-    }
+    // }
     // This function allows the contract owner to execute a transaction once the required number of approvals is reached.
     // The transaction is marked as executed and the transaction details are sent to the recipient through a call.
     // An Execute event is emitted with the transaction ID.
     function execute(uint _txId) external onlyOwner txExists(_txId) notExecuted(_txId) {
-        require(_getConfirmationCount(_txId) >= required, "cannot execute tx");
+        // require(_getConfirmationCount(_txId) >= required, "cannot execute tx");
 
         Transaction storage transaction = transactions[_txId];
+         
+        require(transaction.numConfirmations >= required, "cannot execute tx");
         transaction.executed = true;
 
         (bool success, ) = transaction.to.call{value: transaction.value}(transaction.data);
         require(success, "tx failed");
 
-        emit Execute(_txId);
+        emit Execute(msg.sender, _txId);
     }
     // This function allows the contract owner to revoke their approval of a transaction.
     // The confirmations mapping is updated with the owner's revocation and emitted through the Revoke event.
