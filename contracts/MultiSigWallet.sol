@@ -82,6 +82,8 @@ contract MultiSigWallet {
         emit Deposit(msg.sender, msg.value, address(this).balance);
     }
 
+    // addOwner() removeOwner() replaceOwner() add these functions later
+
     function deposit() external payable {
         emit Deposit(msg.sender, msg.value, address(this).balance);
     }
@@ -177,3 +179,31 @@ contract MultiSigWallet {
 
 
 }
+
+
+// function mint(
+//     address to,
+//     uint256 tokenId,
+//     string memory tokenUri,
+//     string memory digest,
+//     uint8[] calldata sigV,
+//     bytes32[] calldata sigR,
+//     bytes32[] calldata sigS
+// ) external {
+//     require(sigV.length == sigR.length && sigR.length == sigS.length, "SCO2AToken: invalid signature lengths");
+//     require(sigV.length >= 2, "SCO2AToken: at least two signatures required");
+
+//     bytes32 hash = keccak256(abi.encodePacked(to, tokenId, tokenUri, digest));
+//     uint256 validSignatureCount = 0;
+
+//     for (uint256 i = 0; i < sigV.length; i++) {
+//         address signer = ecrecover(hash, sigV[i], sigR[i], sigS[i]);
+//         if (hasMultiSigRole(signer)) {
+//             validSignatureCount++;
+//         }
+//     }
+
+//     require(validSignatureCount >= 2, "SCO2AToken: insufficient valid signatures");
+
+//     // Proceed with minting logic
+// }

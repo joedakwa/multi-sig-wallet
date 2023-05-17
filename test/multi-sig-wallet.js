@@ -71,7 +71,7 @@ contract("MultiSigWallet", (accounts) => {
     })
 
     // execute transaction should fail if already executed
-    it.only("should reject if already executed", async () => {
+    it("should reject if already executed", async () => {
       await wallet.executeTransaction(0, { from: owners[0] })
 
       try {
